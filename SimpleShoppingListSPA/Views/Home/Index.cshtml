@@ -1,0 +1,243 @@
+﻿@* ------------------------- HEADER ------------------------- *@
+<div id="createListDiv">
+    <h1>Simple Shopping List</h1>
+
+    <button onclick="createShoppingList()" class="btn btn-success mb-3">Create shopping list</button>
+
+    <input id="shoppingListName" class="form-control" type="text" placeholder="#shoppingListName" />
+</div>
+
+
+@* ------------------------- SHOPPING LIST CONTENT ------------------------- *@
+
+<div id="shoppingListDiv" class="mt-3" style="display: none;">
+    <h1 id="shoppingListTitle">New List</h1>
+
+    <button onclick="addItem()" class="btn btn-success mb-3">Add to list</button>
+
+    <input id="newItemName" class="form-control" type="text" placeholder="#newItemName" />
+
+    <ul id="shoppingListItems" class="mt-3 list-unstyled" style="max-width: 300px">
+        <li class="mb-3">
+            Salad<button id="" class="btn btn-sm btn-info">Check</button><button id="" class="btn btn-sm btn-danger ml-2">Delete</button>
+        </li>
+        <li class="mb-3">
+            Milk<button id="" class="btn btn-sm btn-info">Check</button><button id="" class="btn btn-sm btn-danger ml-2">Delete</button>
+        </li>
+        <li class="mb-3">
+            Tomatoes<button id="" class="btn btn-sm btn-info">Check</button><button id="" class="btn btn-sm btn-danger ml-2">Delete</button>
+        </li>
+    </ul>
+
+</div>
+
+@section scripts
+{
+    <script>
+        var currentList = {};
+
+        function createShoppingList() {
+
+            //THE currentListCreation
+            currentList.name = $("#shoppingListName").val();
+            currentList.items = [];
+            //END OF currentListCreation
+
+            //cal web service
+            $.ajax({
+                url: '/api/ShoppingListsEF/',
+                type: 'POST',
+                dataType: "json",
+                data: currentList,
+                success: function (result) {
+                    currentList = result;
+                    showShoppingList();
+
+                    history.pushState({id: result.id, madeBy: 'made by KRISTIJAN'}, result.name, "?id=" + result.id);
+                },
+                error: function () {
+                    console.log("Something bad happened");
+                },
+            });
+        }
+
+        function showShoppingList() {
+            $("#shoppingListTitle").html(currentList.name);
+            $("#shoppingListItems").empty();
+
+            $("#createListDiv").hide();
+            $("#shoppingListDiv").show();
+
+            $("#newItemName").val("");
+            $("#newItemName").focus();
+            $("#newItemName").unbind("keyup");
+            $("#newItemName").keyup(function (event) {
+                //enter ==> keyCode = 13
+                if (event.keyCode == 13) {
+                    addItem();
+                }
+            });
+        }
+
+        function addItem() {
+
+            //THE NewItem
+            var newItem = {};
+            newItem.name = $("#newItemName").val();
+            //END OF NewItem MANIPULATION
+            newItem.shoppingListId = currentList.id;
+
+            $.ajax({
+                url: 'api/ItemsEF/',
+                type: 'POST',
+                dataType: "json",
+                data: newItem,
+                success: function (result) {
+                    currentList = result;
+                    drawItems();
+                    $("#newItemName").val("");
+                },
+                error: function () {
+                    console.log("Something bad happened");
+                },
+            });
+        }
+
+        //DRAW ITEMS ==> for each item in current list we make a new li, append it to the shopping list ul and show it
+        function drawItems() {
+            //delete current items so we can update it with the new ones
+            var $shoppingListItems = $("#shoppingListItems").empty();
+
+            //********* LOOP THROUGH ITEMS IN CURRENTLIST *********
+            for (var index = 0; index < currentList.items.length; index++) {
+                //currentItemInList
+                var currentItemInList = currentList.items[index];
+
+                //drawing new <li></li> for $shoppingListItems
+                var $li = $("<li class='mb-3'>").html("<span class='itemName'>" + currentItemInList.name).attr("id", "item_" + currentItemInList.id);
+
+                //buttons for $li
+                var $deleteBtn = $("<button class='btn btn-sm btn-danger ml-auto' onclick='deleteItem(" + currentItemInList.id + ")'>Delete</button>").appendTo($li);
+                var $checkBtn = $("<button class='btn btn-sm btn-info' onclick='checkItem(" + currentItemInList.id + ")'>Check</button>").appendTo($li);
+
+                if (currentItemInList.checked) {
+                    $li.find(".itemName").addClass("checked");
+                }
+
+                //add $li to $shoppingListItems
+                $li.appendTo($shoppingListItems);
+            }
+
+        }
+
+        function deleteItem(itemId) {
+
+            $.ajax({
+                url: '/api/ItemsEF/' + itemId,
+                type: 'Delete',
+                dataType: "json",
+                success: function (result) {
+                    currentList = result;
+                    drawItems();
+                },
+                error: function () {
+                    console.log("Something bad happened");
+                },
+            });
+
+        }
+
+        function checkItem(itemId) {
+            var changedItem = {};
+
+            for (var i = 0; i < currentList.items.length; i++) {
+                if (currentList.items[i].id == itemId) {
+                    changedItem = currentList.items[i];
+                }
+            }
+
+            changedItem.checked = !changedItem.checked;
+
+            $.ajax({
+                url: '/api/ItemsEF/' + itemId,
+                type: 'PUT',
+                dataType: "json",
+                data: changedItem,
+                success: function (result) {
+                    changedItem = result;
+                    drawItems();
+                },
+                error: function () {
+                    console.log("Something bad happened");
+                },
+            });
+
+            //if ($("#item_" + index).find(".itemName").hasClass("strike")) {
+            //    theItem.removeClass("strike");
+            //}
+            //else {
+            //    theItem.addClass("strike");
+            //}
+        } 
+
+        function getShoppingListById (id) {
+
+            $.ajax({
+                url: '/api/ShoppingListsEF/' + id,
+                type: 'GET',
+                dataType: "json",
+                success: function (result) {
+                    currentList = result;
+                    showShoppingList();
+                    drawItems();
+                },
+                error: function () {
+                    console.log("Something bad happened");
+                },
+            });
+        }
+
+        function hideShoppingList() {
+            $("#createListDiv").show();
+            $("#shoppingListDiv").hide();
+
+            $("#shoppingListName").val("");
+            $("#shoppingListName").focus();
+            $("#shoppingListName").unbind("keyup");
+            $("#shoppingListName").keyup(function (event) {
+                //enter ==> keyCode = 13
+                if (event.keyCode == 13) {
+                    createShoppingList();
+                }
+            });
+        }
+
+        //DOCUMENT READY
+        $(document).ready(function () {
+            hideShoppingList();
+
+            var pageUrl = window.location.href;
+            var itemIdIndex = pageUrl.indexOf("?id=");
+
+            //if -1 user has not entered ?id=
+            if (itemIdIndex != -1) {
+                getShoppingListById(pageUrl.substr(itemIdIndex + 4)); //+4 ==> '?id=' ==> 4 letters we have to skip to get the id
+            }
+
+            window.onpopstate = function (event) {
+                if (event.state == null) {
+                    //hide shopping list
+                    hideShoppingList();
+                } else {
+                    //load shopping list with corresponding id
+                    console.log(event.state);
+                    alert(event.state.madeBy)
+                    getShoppingListById(event.state.id);
+
+                }
+            };
+        });
+    </script>
+
+    <script src="~/Scripts/Home/index.js"></script>
+}

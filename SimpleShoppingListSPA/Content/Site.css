@@ -1,0 +1,27 @@
+﻿body {
+    background-color: #ffe1d6;
+}
+
+#shoppingListItems li {
+    min-height: 20px;
+    background-color: white;
+    padding: 10px;
+    display: flex;
+    align-content: center;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+#shoppingListItems li button:last-child {
+    margin-left: 1rem;
+}
+
+.itemName {
+    font-weight: bold;
+}
+
+.checked {
+    text-decoration: line-through;
+    font-weight: 400;
+    text-decoration-thickness: 5px;
+}
